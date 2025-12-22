@@ -1,0 +1,251 @@
+/* ========== GIAO DIỆN CHUNG ========== */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #fff;
+    margin: 0;
+}
+
+.header {
+    background-color: #fff;
+    padding: 15px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo img {
+    max-height: 50px;
+}
+
+/* ========== MENU ========== */
+.nav-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+}
+
+.nav-menu li {
+    margin: 0 20px;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    font-size: 16px;
+    transition: color 0.2s;
+}
+
+.nav-menu a:hover {
+    color: #ff4d4d;
+}
+
+/* ========== THANH TÌM KIẾM & ICON ========== */
+.search-bar {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.search-bar input {
+    border-radius: 20px 0 0 20px;
+}
+
+.search-bar button {
+    border-radius: 0 20px 20px 0;
+}
+
+.cart-icon, .login-icon {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+    margin-left: 15px;
+    transition: color 0.2s;
+}
+
+.cart-icon:hover, .login-icon:hover {
+    color: #ff4d4d;
+}
+
+/* ========== SLIDER ========== */
+.slider {
+    margin: 20px 0;
+}
+
+.carousel-caption {
+    background: rgba(0,0,0,0.5);
+    border-radius: 5px;
+}
+
+/* ========== KHUNG SẢN PHẨM CHUNG ========== */
+.product-grid {
+    padding: 20px 0;
+    margin-top: 1px;
+}
+
+.product {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.product:hover {
+    transform: translateY(-5px);
+}
+
+.product img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+.product h3 {
+    font-size: 16px;
+    margin: 10px 0;
+    height: 40px;
+    overflow: hidden;
+}
+
+.price {
+    font-size: 16px;
+    color: #333;
+    font-weight: bold;
+}
+
+.discount {
+    color: #ff4d4d;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 14px;
+}
+
+/* ========== DANH MỤC SẢN PHẨM ========== */
+.category-product-section {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 20px;
+}
+
+.category-column,
+.product-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.category-wrapper {
+    border-left: 1px solid #ccc;
+    padding-left: 10px;
+    margin-top: 2px;
+}
+
+/* ======= TIÊU ĐỀ CHUNG ======= */
+.category-title,
+.section-title,
+.product-section-title {
+    font-size: 22px;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    padding-bottom: 2px;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+
+/* ======= DANH MỤC CHA & CON ======= */
+.category-list,
+.subcategory-list {
+    list-style: none;
+    padding-left: 10px;
+    margin: 0;
+}
+
+.category-list > li {
+    position: relative;
+    padding: 6px 0 6px 15px;
+}
+
+.category-list > li:not(:last-child) {
+    border-bottom: 1px dashed #e0e0e0;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+}
+
+.subcategory-list {
+    margin: 5px 0;
+    border-left: 1px solid #ccc;
+    padding-left: 10px;
+}
+
+.subcategory-list li {
+    position: relative;
+    padding: 5px 0 5px 15px;
+}
+
+.subcategory-list li::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    width: 10px;
+    height: 1px;
+    background-color: #aaa;
+    transform: translateY(-50%);
+}
+
+.subcategory-list li::after {
+    content: "›";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #000;
+}
+
+/* ======= LINK DANH MỤC ======= */
+.category-list li a,
+.subcategory-list li a {
+    display: block;
+    text-decoration: none;
+    color: #000;
+    font-size: 15px;
+    transition: color 0.2s;
+}
+
+.category-list li a:hover,
+.subcategory-list li a:hover {
+    color: #ff4d4d;
+}
+
+/* ========== CĂN GIỮA NỘI DUNG ========== */
+.col-md-9 {
+    text-align: center;
+}
+
+.col-md-9 .product-grid {
+    text-align: left;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .category-product-section {
+        flex-direction: column;
+    }
+
+    .category-column {
+        order: 2;
+        margin-top: 20px;
+    }
+
+    .product-column {
+        order: 1;
+    }
+}
