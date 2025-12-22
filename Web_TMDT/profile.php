@@ -12,16 +12,23 @@ if (!isset($_SESSION['khach_hang'])) {
 $user = $_SESSION['khach_hang'];
 $id_kh = $user['id_khach_hang'];
 
-/* ======================== XỬ LÝ CẬP NHẬT AVATAR ======================== */
-// 1. Tải lên từ máy
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['avatar_upload'])) {
+// Hàm xóa ảnh cũ an toàn
+function deleteOldImage($old_path) {
+    if (!empty($old_path) && file_exists($old_path) && strpos($old_path, 'uploads/') === 0) {
+        @unlink($old_path);
+    }
+}
+
+/* ======================== XỬ LÝ AVATAR ======================== */
+// Upload avatar từ máy
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['avatar_upload']) && $_FILES['avatar_upload']['error'] === UPLOAD_ERR_OK) {
     $target_dir = "uploads/avatars/";
     if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
 
     $file = $_FILES['avatar_upload'];
-    $fileName = time() . '_' . basename($file["name"]);
+    $ext = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+    $fileName = time() . '_' . uniqid() . '.' . $ext;
     $target_file = $target_dir . $fileName;
-    $ext = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
     $check = getimagesize($file["tmp_name"]);
     if ($check === false) {
@@ -29,42 +36,102 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['avatar_upload'])) {
     } elseif ($file["size"] > 5000000) {
         echo "<script>alert('File quá lớn (tối đa 5MB)');</script>";
     } elseif (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-        echo "<script>alert('Chỉ chấp nhận JPG, PNG, GIF, WEBP');</script>";
+        echo "<script>alert('Chỉ chấp nhận JPG, JPEG, PNG, GIF, WEBP');</script>";
     } else {
+        deleteOldImage($user['anh_dai_dien']);
+
         if (move_uploaded_file($file["tmp_name"], $target_file)) {
             $sql = "UPDATE khach_hang SET anh_dai_dien = ? WHERE id_khach_hang = ?";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("si", $target_file, $id_kh);
-            $stmt->execute();
+            if ($stmt) {
+                $stmt->bind_param("si", $target_file, $id_kh);
+                $stmt->execute();
+                $stmt->close();
 
-            $user['anh_dai_dien'] = $target_file;
-            $_SESSION['khach_hang'] = $user;
-            echo "<script>alert('Cập nhật avatar thành công!'); location.reload();</script>";
+                $_SESSION['khach_hang']['anh_dai_dien'] = $target_file;
+
+                echo "<script>alert('Cập nhật avatar thành công!'); window.location='profile.php';</script>";
+                exit;
+            }
+        } else {
+            echo "<script>alert('Lỗi khi tải lên file avatar.');</script>";
         }
     }
 }
 
-// 2. Chọn từ Unsplash (đã sửa lỗi)
+// Chọn avatar từ thư viện (local folder)
+// Chọn avatar từ thư viện (local folder) - ĐÃ SỬA KHÔNG XÓA ẢNH THƯ VIỆN
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['set_unsplash_avatar'])) {
     $url = filter_var($_POST['avatar_url'], FILTER_SANITIZE_URL);
+
+    // CHỈ XÓA ẢNH CŨ NẾU NÓ LÀ ẢNH UPLOAD CÁ NHÂN (có timestamp trong tên)
+    // Ảnh thư viện có tên avatar1.jpg -> avatar8.jpg → KHÔNG XÓA
+    if (!empty($user['anh_dai_dien']) && 
+        strpos(basename($user['anh_dai_dien']), 'avatar') !== 0 &&  // Không bắt đầu bằng "avatar"
+        strpos($user['anh_dai_dien'], 'uploads/avatars/') === 0) {  // Là ảnh trong folder avatars
+        deleteOldImage($user['anh_dai_dien']);
+    }
+
     $sql = "UPDATE khach_hang SET anh_dai_dien = ? WHERE id_khach_hang = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $url, $id_kh);
-    $stmt->execute();
+    if ($stmt) {
+        $stmt->bind_param("si", $url, $id_kh);
+        $stmt->execute();
+        $stmt->close();
 
-    $user['anh_dai_dien'] = $url;
-    $_SESSION['khach_hang'] = $user;
-    echo "<script>alert('Đã thay đổi avatar!'); location.reload();</script>";
+        $_SESSION['khach_hang']['anh_dai_dien'] = $url;
+
+        echo "<script>alert('Thay đổi avatar thành công!'); window.location='profile.php';</script>";
+        exit;
+    }
 }
 
-/* ======================== DỮ LIỆU CŨ ======================== */
+/* ======================== XỬ LÝ ẢNH BÌA ======================== */
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['cover_upload']) && $_FILES['cover_upload']['error'] === UPLOAD_ERR_OK) {
+    $target_dir = "uploads/covers/";
+    if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+
+    $file = $_FILES['cover_upload'];
+    $ext = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+    $fileName = time() . '_' . uniqid() . '.' . $ext;
+    $target_file = $target_dir . $fileName;
+
+    $check = getimagesize($file["tmp_name"]);
+    if ($check === false) {
+        echo "<script>alert('File ảnh bìa không phải là ảnh!');</script>";
+    } elseif ($file["size"] > 10000000) {
+        echo "<script>alert('File ảnh bìa quá lớn (tối đa 10MB)');</script>";
+    } elseif (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
+        echo "<script>alert('Chỉ chấp nhận JPG, JPEG, PNG, GIF, WEBP');</script>";
+    } else {
+        deleteOldImage($user['anh_nen'] ?? '');
+
+        if (move_uploaded_file($file["tmp_name"], $target_file)) {
+            $sql = "UPDATE khach_hang SET anh_nen = ? WHERE id_khach_hang = ?";
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("si", $target_file, $id_kh);
+                $stmt->execute();
+                $stmt->close();
+
+                $_SESSION['khach_hang']['anh_nen'] = $target_file;
+
+                echo "<script>alert('Cập nhật ảnh bìa thành công!'); window.location='profile.php';</script>";
+                exit;
+            }
+        } else {
+            echo "<script>alert('Lỗi khi tải lên ảnh bìa.');</script>";
+        }
+    }
+}
+
+/* ======================== DỮ LIỆU KHÁC ======================== */
 $dob = '01/01/1990';
 $address = ['country'=>'Việt Nam','city'=>'Hà Nội','street'=>'123 Đường ABC','postal'=>'10000'];
 
-/* Đổi mật khẩu – giữ nguyên */
 $password_success = $password_error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'change_password') {
-    // (code đổi mật khẩu của bạn – giữ nguyên 100%)
+    // Code đổi mật khẩu giữ nguyên như cũ
     $old_password = $_POST['old_password'] ?? '';
     $new_password = $_POST['new_password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
@@ -99,7 +166,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     }
 }
 
-/* Đơn hàng */
 $sql_orders = "SELECT dh.*, SUM(ctdh.so_luong * ctdh.don_gia) as tong_tien 
                FROM don_hang dh 
                JOIN chi_tiet_don_hang ctdh ON dh.id_don_hang = ctdh.id_don_hang 
@@ -124,53 +190,49 @@ $orders = $stmt_orders->get_result();
     <link rel="stylesheet" href="assets/Css/style.css">
 
     <style>
-        :root {
-            --primary: #00bcd4;
-            --secondary: #0097a7;
-            --light: #f8f9fa;
-            --dark: #495057;
-            --border: #dee2e6;
-        }
+        :root {--primary:#00bcd4;--secondary:#0097a7;--light:#f8f9fa;--dark:#495057;--border:#dee2e6;}
         body {font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8f9fa;color:var(--dark);}
 
-        /* ==================== HEADER ĐẸP NHƯ ẢNH MẪU (TÍM → XANH DƯƠNG + BONG BÓNG) ==================== */
         .profile-header{
-            position:relative;
-            background:linear-gradient(135deg,#e91e63 0%,#9c27b0 35%,#673ab7 70%,#3f51b5 100%);
-            color:white;
-            padding:5.5rem 0 4.5rem;
-            border-radius:24px;
-            overflow:hidden;
-            box-shadow:0 15px 40px rgba(103,58,183,.3);
+            position:relative;background:linear-gradient(135deg,#e91e63 0%,#9c27b0 35%,#673ab7 70%,#3f51b5 100%);
+            color:white;padding:5.5rem 0 3rem;border-radius:24px;overflow:hidden;box-shadow:0 15px 40px rgba(103,58,183,.3);min-height:400px;
         }
-        .profile-header::before,.profile-header::after,.bubble{
-            content:'';position:absolute;border-radius:50%;filter:blur(70px);opacity:.3;
+        .profile-header.has-cover {
+            background: none;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
         }
+        .profile-header.has-cover::before,
+        .profile-header.has-cover::after {
+            display: none;
+        }
+        .profile-header.has-cover .bubble-1,
+        .profile-header.has-cover .bubble-2,
+        .profile-header.has-cover .bubble-3 {
+            display: none;
+        }
+        .cover-image{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;opacity:0.55;z-index:1;}
+        .profile-header.has-cover .cover-image {
+            opacity: 1;
+        }
+        .profile-header::before,.profile-header::after,.bubble{content:'';position:absolute;border-radius:50%;filter:blur(70px);opacity:.3;z-index:2;}
         .profile-header::before{width:450px;height:450px;background:#e91e63;top:-120px;left:-100px;}
         .profile-header::after{width:550px;height:550px;background:#3f51b5;bottom:-180px;right:-140px;}
-        .bubble-1{width:220px;height:220px;background:rgba(255,255,255,.2);top:60px;right:80px;}
-        .bubble-2{width:320px;height:320px;background:rgba(255,255,255,.15);bottom:100px;left:40px;}
-        .bubble-3{width:180px;height:180px;background:rgba(255,255,255,.18);top:200px;left:180px;}
+        .bubble-1{width:220px;height:220px;background:rgba(255,255,255,.2);top:60px;right:80px;z-index:2;}
+        .bubble-2{width:320px;height:320px;background:rgba(255,255,255,.15);bottom:100px;left:40px;z-index:2;}
+        .bubble-3{width:180px;height:180px;background:rgba(255,255,255,.18);top:200px;left:180px;z-index:2;}
+
+        .change-cover-btn{position:absolute;top:20px;right:30px;background:rgba(255,255,255,.95);color:#673ab7;width:50px;height:50px;border-radius:50%;border:none;font-size:1.5rem;box-shadow:0 8px 25px rgba(0,0,0,.35);z-index:10;transition:.3s;}
+        .change-cover-btn:hover{background:white;transform:scale(1.15);color:#e91e63;}
 
         .avatar-container{position:relative;display:inline-block;z-index:10;}
-        .avatar{
-            width:150px;height:150px;border-radius:50%;border:8px solid white;
-            box-shadow:0 20px 50px rgba(0,0,0,.4);object-fit:cover;background:white;
-            transition:all .4s ease;
-        }
+        .avatar{width:150px;height:150px;border-radius:50%;border:8px solid white;box-shadow:0 20px 50px rgba(0,0,0,.4);object-fit:cover;background:white;transition:.4s;}
         .avatar:hover{transform:scale(1.08);}
-        .change-avatar-btn{
-            position:absolute;bottom:12px;right:12px;background:rgba(255,255,255,.95);
-            color:#9c27b0;width:50px;height:50px;border-radius:50%;border:none;
-            font-size:1.5rem;box-shadow:0 8px 25px rgba(0,0,0,.35);cursor:pointer;
-            transition:all .4s ease;
-        }
+        .change-avatar-btn{position:absolute;bottom:12px;right:12px;background:rgba(255,255,255,.95);color:#9c27b0;width:50px;height:50px;border-radius:50%;border:none;font-size:1.5rem;box-shadow:0 8px 25px rgba(0,0,0,.35);cursor:pointer;transition:.4s;}
         .change-avatar-btn:hover{background:white;transform:scale(1.25);color:#e91e63;}
 
-        .user-name{font-size:2.4rem;font-weight:800;margin:1.5rem 0 .6rem;text-shadow:0 4px 20px rgba(0,0,0,.6);z-index:10;position:relative;}
-        .user-location{font-size:1.15rem;opacity:.95;z-index:10;position:relative;}
+        .user-name{font-size:2.4rem;font-weight:800;margin:1.5rem 0 .6rem;text-shadow:0 4px 20px rgba(0,0,0,.6);}
+        .user-location{font-size:1.15rem;opacity:.95;}
 
-        /* ==================== GIỮ NGUYÊN 100% STYLE CŨ CỦA BẠN ==================== */
         .profile-card{background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);border:1px solid var(--border);overflow:hidden;margin-bottom:1.5rem;}
         .section-header{background:var(--light);padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:600;color:var(--dark);font-size:1.1rem;}
         .info-grid{padding:1.5rem;}
@@ -178,18 +240,15 @@ $orders = $stmt_orders->get_result();
         .info-row:last-child{border-bottom:none;}
         .info-label{font-weight:500;color:var(--dark);min-width:120px;flex:0 0 120px;}
         .info-value{flex:1;color:#6c757d;}
-        .edit-btn{background:var(--primary);color:white;border:none;border-radius:6px;padding:.375rem .75rem;font-size:.875rem;transition:background .2s ease;}
+        .edit-btn{background:var(--primary);color:white;border:none;border-radius:6px;padding:.375rem .75rem;font-size:.875rem;transition:.2s;}
         .edit-btn:hover{background:var(--secondary);}
-        .nav-link{color:var(--dark);padding:.875rem 1rem;transition:background .2s ease;}
+        .nav-link{color:var(--dark);padding:.875rem 1rem;transition:.2s;}
         .nav-link:hover,.nav-link.active{background:var(--primary);color:white;}
         .tab-content{display:none;}
         .tab-content.active{display:block;}
         .empty-state{text-align:center;padding:2rem;color:#6c757d;}
         .empty-state i{font-size:2.5rem;margin-bottom:.5rem;opacity:.5;}
-        @media (max-width:768px){
-            .info-row{flex-direction:column;align-items:flex-start;}
-            .info-label{min-width:auto;margin-bottom:.25rem;}
-        }
+        @media (max-width:768px){.info-row{flex-direction:column;align-items:flex-start;}.info-label{min-width:auto;margin-bottom:.25rem;}}
     </style>
 </head>
 <body>
@@ -209,14 +268,22 @@ $orders = $stmt_orders->get_result();
         </div>
 
         <div class="col-md-9">
-            <!-- HEADER SIÊU ĐẸP -->
+            <!-- HEADER VỚI ẢNH BÌA -->
             <div class="profile-card mb-4">
-                <div class="profile-header text-center position-relative">
+                <div class="profile-header text-center position-relative <?= !empty($user['anh_nen']) ? 'has-cover' : '' ?>">
+                    <?php if (!empty($user['anh_nen'])): ?>
+                        <img src="<?= htmlspecialchars($user['anh_nen']) ?>" alt="Ảnh bìa" class="cover-image">
+                    <?php endif; ?>
+
                     <div class="bubble bubble-1"></div>
                     <div class="bubble bubble-2"></div>
                     <div class="bubble bubble-3"></div>
 
-                    <div class="avatar-container">
+                    <button class="change-cover-btn" data-bs-toggle="modal" data-bs-target="#coverModal">
+                        <i class="fas fa-camera"></i>
+                    </button>
+
+                    <div class="avatar-container mt-4">
                         <?php if (!empty($user['anh_dai_dien'])): ?>
                             <img src="<?= htmlspecialchars($user['anh_dai_dien']) ?>" alt="Avatar" class="avatar">
                         <?php else: ?>
@@ -233,7 +300,7 @@ $orders = $stmt_orders->get_result();
                 </div>
             </div>
 
-            <!-- ==================== TAB CŨ CỦA BẠN (giữ nguyên 100%) ==================== -->
+            <!-- Tab thông tin cá nhân -->
             <div id="profile" class="tab-content active">
                 <div class="profile-card">
                     <div class="section-header d-flex justify-content-between align-items-center">
@@ -262,7 +329,7 @@ $orders = $stmt_orders->get_result();
                 </div>
             </div>
 
-            <!-- Orders Tab (giữ nguyên) -->
+            <!-- Tab đơn hàng -->
             <div id="orders" class="tab-content">
                 <div class="profile-card">
                     <div class="section-header"><i class="bi bi-receipt me-2"></i>Đơn hàng gần đây</div>
@@ -293,7 +360,7 @@ $orders = $stmt_orders->get_result();
                 </div>
             </div>
 
-            <!-- Settings Tab (giữ nguyên) -->
+            <!-- Tab cài đặt -->
             <div id="settings" class="tab-content">
                 <div class="profile-card">
                     <div class="section-header"><i class="bi bi-shield-lock me-2"></i>Thay đổi mật khẩu</div>
@@ -316,7 +383,7 @@ $orders = $stmt_orders->get_result();
     </div>
 </div>
 
-<!-- MODAL THAY AVATAR – ĐÃ SỬA LỖI 100% -->
+<!-- MODAL THAY ẢNH ĐẠI DIỆN -->
 <div class="modal fade" id="avatarModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow-lg">
@@ -324,59 +391,77 @@ $orders = $stmt_orders->get_result();
                 <h5 class="modal-title fw-bold">Thay đổi ảnh đại diện</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-
-                <!-- Tabs -->
-                <ul class="nav nav-pills mb-4">
-                    <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#upload">Tải lên</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#library">Thư viện ảnh đẹp</a>
-                    </li>
-                </ul>
-
-                <div class="tab-content">
-                    <!-- TAB TẢI LÊN -->
-                    <div class="tab-pane fade show active" id="upload">
-                        <form method="POST" enctype="multipart/form-data" class="text-center">
-                            <!-- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT -->
-                            <input type="file" name="avatar_upload" accept="image/*" class="form-control form-control-lg" required>
-                            <button type="submit" class="btn btn-primary btn-lg mt-3 px-5">
-                                Tải lên & Đặt làm avatar
-                            </button>
-                        </form>
+            <div class="modal-body p-4 text-center">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="avatar_upload" class="form-label fw-bold fs-5">Chọn ảnh đại diện từ máy tính</label>
+                        <input type="file" name="avatar_upload" id="avatar_upload" accept="image/*" class="form-control form-control-lg" required>
                     </div>
+                    <p class="text-muted mb-4">Hỗ trợ: JPG, PNG, GIF, WEBP (tối đa 5MB)</p>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        Tải lên & Đặt làm avatar
+                    </button>
+                </form>
 
-                    <!-- TAB THƯ VIỆN -->
-                    <div class="tab-pane fade" id="library">
-                        <div class="row g-4">
-                            <?php
-                            $unsplash_avatars = [
-                                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80",
-                                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80",
-                                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80",
-                                "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=600&q=80",
-                                "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&q=80",
-                                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80",
-                                "https://images.unsplash.com/photo-1539571696357-5a69c17a65c6?w=600&q=80",
-                                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&q=80"
-                            ];
-                            foreach ($unsplash_avatars as $img): ?>
-                                <div class="col-6 col-md-4 col-lg-3">
-                                    <form method="POST">
-                                        <input type="hidden" name="set_unsplash_avatar" value="1">
-                                        <input type="hidden" name="avatar_url" value="<?= $img ?>">
-                                        <button type="submit" class="btn p-0 border-0 rounded-4 overflow-hidden shadow w-100">
-                                            <img src="<?= $img ?>" class="img-fluid rounded-4" style="height:140px;object-fit:cover;">
-                                        </button>
-                                    </form>
-                                </div>
-                            <?php endforeach; ?>
+                <hr class="my-5">
+                <h6 class="fw-bold mb-4">Hoặc chọn từ thư viện gợi ý của web</h6>
+                <div class="row g-4">
+<?php
+                    $avatar_dir = "uploads/avatars/suggest/";
+                    // Tạo danh sách 8 ảnh cố định avatar1 đến avatar8
+                    $local_avatars = [];
+                    for ($i = 1; $i <= 8; $i++) {
+                        $possible_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                        $found = false;
+                        foreach ($possible_extensions as $ext) {
+                            $file_path = $avatar_dir . "avatar" . $i . "." . $ext;
+                            if (file_exists($file_path)) {
+                                $local_avatars[] = $file_path;
+                                $found = true;
+                                break;
+                            }
+                        }
+                        // Nếu không tìm thấy ảnh nào cho số i, thêm placeholder (tùy chọn)
+                        if (!$found) {
+                            $local_avatars[] = 'https://via.placeholder.com/600?text=Avatar+' . $i;
+                        }
+                    }
+
+                    foreach ($local_avatars as $img): ?>
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <form method="POST">
+                                <input type="hidden" name="set_unsplash_avatar" value="1">
+                                <input type="hidden" name="avatar_url" value="<?= $img ?>">
+                                <button type="submit" class="btn p-0 border-0 rounded-4 overflow-hidden shadow w-100">
+                                    <img src="<?= $img ?>" class="img-fluid rounded-4" style="height:140px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/600?text=No+Image';">
+                                </button>
+                            </form>
                         </div>
-                        <div class="text-center mt-4 text-muted small">Ảnh miễn phí từ Unsplash</div>
-                    </div>
+                    <?php endforeach; ?>
+                    
                 </div>
+                <div class="text-center mt-4 text-muted small">Ảnh gợi ý từ thư mục suggest (uploads/avatars/suggest/)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ẢNH BÌA -->
+<div class="modal fade" id="coverModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#673ab7,#e91e63);">
+                <h5 class="modal-title fw-bold">Thay đổi ảnh bìa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="file" name="cover_upload" accept="image/*" class="form-control form-control-lg" required>
+                    <p class="text-muted mt-2">Khuyến nghị: 1500x500px trở lên</p>
+                    <button type="submit" class="btn btn-primary btn-lg mt-3 px-5">
+                        Tải lên & Đặt làm ảnh bìa
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -387,10 +472,10 @@ $orders = $stmt_orders->get_result();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function switchTab(id){
-        document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-        document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
+        document.querySelector(`a[href="#${id}"]`).classList.add('active');
     }
     function editPersonal(){alert('Chỉnh sửa thông tin cá nhân');}
     function editAddress(){alert('Chỉnh sửa địa chỉ');}

@@ -24,7 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'id_khach_hang' => $user['id_khach_hang'],
                     'ho_ten' => $user['ho_ten'],
                     'email' => $user['email'],
-                    'dien_thoai' => $user['dien_thoai']
+                    'dien_thoai' => $user['dien_thoai'],
+                    'anh_dai_dien' => $user['anh_dai_dien'],  // Thêm dòng này
+                    'anh_nen' => $user['anh_nen']
                 ];
                 // Quay lại trang trước đó (nếu có)
                 $return = $_GET['return'] ?? 'index.php';

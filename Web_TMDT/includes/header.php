@@ -49,7 +49,11 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
                 ?>
                     <div class="user-dropdown dropdown">
                         <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-2"></i>
+                            <?php if (!empty($_SESSION['khach_hang']['anh_dai_dien'])): ?>
+                                <img src="<?= htmlspecialchars($_SESSION['khach_hang']['anh_dai_dien']) ?>" alt="Avatar" class="me-2" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                            <?php else: ?>
+                                <i class="bi bi-person-circle me-2"></i>
+                            <?php endif; ?>
                             <span class="d-none d-md-inline"><?= $ten_kh ?></span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
