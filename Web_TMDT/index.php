@@ -234,3 +234,5 @@ function addToCart(id) {
 </script>
 
 <?php include 'includes/footer.php'; ?>
+
+

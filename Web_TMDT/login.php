@@ -228,8 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <i class="fas fa-arrow-left me-1"></i>Quay lại trang chủ
             </a>
             <div class="auth-left-content">
-                <div class="logo">Blank<span>Label</span></div>
-                <p class="tagline">BlankLabel — Khi phong cách không cần phô trương để nổi bật.</p>
+                <div class="logo">Bike<span>Market</span></div>
+                <p class="tagline">BikeMarket — Khi phong cách không cần phô trương để nổi bật.</p>
             </div>
         </div>
 

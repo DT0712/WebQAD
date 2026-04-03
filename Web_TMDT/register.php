@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <i class="fas fa-arrow-left me-1"></i>Quay lại trang chủ
             </a>
             <div class="auth-left-content">
-                <div class="logo">Blank<span>Label</span></div>
+                <div class="logo">>Bike<span>Market</span></div>
                 <p class="tagline">Chụp lại những khoảnh khắc, Tạo nên những kỷ niệm</p>
             </div>
         </div>
